@@ -1,0 +1,1412 @@
+Text document => ES => Analysis(Prepares Data) => Inverted Index => Buffer 
+Once the buffer is full => added to segment
+1 complete segment is immutable.
+Multiple segments => 1 shard
+
+Relational DB - Document DB
+table - index
+row - document
+column - field
+
+inserting means indexing in elasticsearch
+
+
+index/insert 
+PUT /{index}/{type}/{id}
+{
+	"field1":"value1",
+	"field2":"value2",
+	......
+}
+
+PUT/vehicle/car/123 
+{
+	"make":"honda",
+	"milage":8799,
+	"color":"red"
+}
+
+only 1 type is allowd for a given index for versions 6+
+If u leave id out, it generates automatically
+
+GET _search
+{
+  "query": {
+    "match_all": {}
+  }
+}
+
+#! Deprecation: [types removal] Specifying types in document index requests is deprecated, use the typeless endpoints instead (/{index}/_doc/{id}, /{index}/_doc, or /{index}/_create/{id}).
+
+
+PUT /vechicles/car/123 
+{
+  "make":"Honda",
+  "milage":89000,
+  "color":"red",
+  "price":12345,
+  "HP":345
+}
+
+{
+  "_index" : "vechicles",
+  "_type" : "car",
+  "_id" : "123",
+  "_version" : 1,
+  "result" : "created",
+  "_shards" : {
+    "total" : 2,
+    "successful" : 1,
+    "failed" : 0
+  },
+  "_seq_no" : 0,
+  "_primary_term" : 1
+}
+
+_version : if the same document is updated multiple times, it'll override the previous document, version will increase
+{
+  "_index" : "vechicles",
+  "_type" : "car",
+  "_id" : "123",
+  "_version" : 2,
+  "result" : "updated",
+  "_shards" : {
+    "total" : 2,
+    "successful" : 1,
+    "failed" : 0
+  },
+  "_seq_no" : 4,
+  "_primary_term" : 1
+}
+--------------------------------------------
+GET /vechicles/car/123  ==> present
+
+{
+  "_index" : "vechicles",
+  "_type" : "car",
+  "_id" : "123",
+  "_version" : 5,
+  "_seq_no" : 4,
+  "_primary_term" : 1,
+  "found" : true,
+  "_source" : {
+    "make" : "Honda",
+    "milage" : 89000,
+    "color" : "red",
+    "price" : 12345,
+    "HP" : 345
+  }
+}
+
+GET /vechicles/car/124  ==> not present
+
+{
+  "_index" : "vechicles",
+  "_type" : "car",
+  "_id" : "124",
+  "found" : false
+}
+------------------------------------
+GET /vechicles/car/123/_source
+
+{
+  "make" : "Honda",
+  "milage" : 89000,
+  "color" : "red",
+  "price" : 12345,
+  "HP" : 345
+}
+--------------------------------------
+HEAD /vechicles/car/123   ==> whether that document exists or not
+
+200 - OK
+
+HEAD /vechicles/car/124
+
+{"statusCode":404,"error":"Not Found","message":"404 - Not Found"}
+
+--------------------------------------------	
+
+When u do PUT to update a specific field in a index, it'll update whole thing.
+Documents are immutable.
+
+One more way to update. But still it'll update the whole thing
+POST /vechicles/car/123/_update 
+{
+  "doc" : {
+    "price" : "14914"
+  }
+}
+
+{
+  "_index" : "vechicles",
+  "_type" : "car",
+  "_id" : "123",
+  "_version" : 6,
+  "result" : "updated",
+  "_shards" : {
+    "total" : 2,
+    "successful" : 1,
+    "failed" : 0
+  },
+  "_seq_no" : 5,
+  "_primary_term" : 1
+}
+--------------------------------------------------
+DELETE /vechicles/car/123
+
+{
+  "_index" : "vechicles",
+  "_type" : "car",
+  "_id" : "123",
+  "_version" : 7,
+  "result" : "deleted",
+  "_shards" : {
+    "total" : 2,
+    "successful" : 1,
+    "failed" : 0
+  },
+  "_seq_no" : 6,
+  "_primary_term" : 1
+}
+
+In /vechicles/car, we zero documents.
+
+DELETE /vechicles/car
+
+{
+  "error" : "Incorrect HTTP method for uri [/vechicles/car?pretty=true] and method [DELETE], allowed: [POST]",
+  "status" : 405
+}
+
+
+When u delete also, version number gets incremented
+
+When u delete a document,elastic search will mark as deleted. But it still exists. It'll delete at later point of time
+
+The structure of vechicles got created automatically
+GET /vechicles
+
+{
+  "vechicles" : {
+    "aliases" : { },
+    "mappings" : {
+      "properties" : {
+        "HP" : {
+          "type" : "long"
+        },
+        "color" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "make" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "milage" : {
+          "type" : "long"
+        },
+        "price" : {
+          "type" : "long"
+        }
+      }
+    },
+    "settings" : {
+      "index" : {
+        "creation_date" : "1593799962052",
+        "number_of_shards" : "1",
+        "number_of_replicas" : "1",
+        "uuid" : "1x6z00xyRdqgPxr-vZcGIg",
+        "version" : {
+          "created" : "7080099"
+        },
+        "provided_name" : "vechicles"
+      }
+    }
+  }
+}
+
+DELETE /vechicles
+{
+  "acknowledged" : true
+}
+
+GET /vechicles
+{
+  "error" : {
+    "root_cause" : [
+      {
+        "type" : "index_not_found_exception",
+        "reason" : "no such index [vechicles]",
+        "resource.type" : "index_or_alias",
+        "resource.id" : "vechicles",
+        "index_uuid" : "_na_",
+        "index" : "vechicles"
+      }
+    ],
+    "type" : "index_not_found_exception",
+    "reason" : "no such index [vechicles]",
+    "resource.type" : "index_or_alias",
+    "resource.id" : "vechicles",
+    "index_uuid" : "_na_",
+    "index" : "vechicles"
+  },
+  "status" : 404
+}
+--------------------------------------------------------------
+GET /vechicles/car/_search   ==> the documents will be in hits array
+
+"match_all" : {} => only shows top 10 results
+
+
+#! Deprecation: [types removal] Specifying types in search requests is deprecated.
+{
+  "took" : 2,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 2,
+      "relation" : "eq"
+    },
+    "max_score" : 1.0,
+    "hits" : [
+      {
+        "_index" : "vechicles",
+        "_type" : "car",
+        "_id" : "123",
+        "_score" : 1.0,
+        "_source" : {
+          "make" : "Honda",
+          "milage" : 89000,
+          "color" : "red",
+          "price" : 12345,
+          "HP" : 345
+        }
+      },
+      {
+        "_index" : "vechicles",
+        "_type" : "car",
+        "_id" : "124",
+        "_score" : 1.0,
+        "_source" : {
+          "make" : "Maruti",
+          "milage" : 800,
+          "color" : "white",
+          "price" : 123,
+          "HP" : 200
+        }
+      }
+    ]
+  }
+}
+
+To query a specific value, we have "query" object.
+In the "query" object, we have "term" object.
+In "term" object, we specify the "key":"value"	
+
+GET /vechicles/car/_search
+{
+  "query": {
+    "term" : {
+      "color":"red"
+    }
+  }
+}
+
+#! Deprecation: [types removal] Specifying types in search requests is deprecated.
+{
+  "took" : 1,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 1,
+      "relation" : "eq"
+    },
+    "max_score" : 0.6931471,
+    "hits" : [
+      {
+        "_index" : "vechicles",
+        "_type" : "car",
+        "_id" : "123",
+        "_score" : 0.6931471,
+        "_source" : {
+          "make" : "Honda",
+          "milage" : 89000,
+          "color" : "red",
+          "price" : 12345,
+          "HP" : 345
+        }
+      }
+    ]
+  }
+}
+
+---------------------------------------------------
+GET /vechicles/car/_search
+{
+  "query": {
+    "match_all": {}
+  }
+}
+
+above query is same as GET /vechicles/car/_search
+
+
+curl -XGET "http://localhost:9200/vechicles/car/_search?pretty" -H 'Content-Type: application/json' -d'{  "query": {    "match_all": {}  }}'
+------------------------------------------------------------
+
+Suppose if a vehicle has 100 documents. Then it'll be splitted into multiple shards.
+To store the backup of those shards, we have replica shards.
+
+vehicles = (0-50) p0 shard, (50-100) p1 shard
+p0 , p1 shards exists in different machines
+Now we will be having replica shards also.
+vehicles = 	(0-50) p0 primary shard, r1 replica shard
+			(50-100) p1 primary shard, r0 replica shard
+p0 and r1 exists in machine1
+p1 and r0 exists in machine2
+
+if machine1 goes down, then the data is present in machine2 as replica shard.
+
+Suppose a request is sent to machine2. machine2 uses hashing function to determine which machine has requested data and re-routes the request to that machine.
+After updating a particular document in machine, it'll send requests to all other machines to update their replica shards to be in sync with primary shard.
+
+index and delete request works in the same way.
+for GET request, it can go to any node. (follows round robin algorithm)
+
+Segment is present inside a shard.
+Each segment is an inverted indicies
+
+Elasticsearch uses a data structure called an inverted index that supports very fast full-text searches. An inverted index lists every unique word that appears in any document and identifies all of the documents each word occurs in.
+
+(inverted index : https://codingexplained.com/coding/elasticsearch/understanding-the-inverted-index-in-elasticsearch)
+
+indexing takes more time.
+
+text document => ES => Analysis(Prepares Data) => Inverted Index => Buffer 
+Once the buffer is full => added to segment
+once the segment is Full, it is immutable.
+multiple segments = shards.
+Once shard is formed, then data is seachable as it is permanent
+
+Text Analysis
+-------------
+Process = 	Remove stop words(Ex : the, an, in ...etc)
+			Lowercasing = make case insensitive
+			Stemming = Swimmers, swimming => both contains. So get the Root word (Here swim)
+			Synonyms = thin and skinny are same. So index either one.
+
+Analysis has 2 parts = Tokenizer and Filter
+
+TEXT => ANALYZER (Tokenizer => Filter) => INVERTED INDEX
+While querying & indexing, same analyzer should be used
+
+Analyzers are applied on specific field in index.
+
+{
+	"name" :"John Doe"
+	"tweeted" : "The thin lifeguard was swimming in the lake"
+}
+
+Here analyzer is applied on "tweeted" field
+---------------------------------------------------------------
+Indexing Manually
+-----------------
+In 6+ version of ES, we can have one mapping/type
+PUT /customers 
+{
+	"aliases" : {},
+	"settings" : {
+		"number_of_shards" : 2, //by default its 5
+		"number_of_replicas" : 1
+	},
+	"mappings" : { //type that goes into index
+ 		"online" : {
+ 			"properties" : {
+ 				"gender" : {
+ 					"type" : "text",
+ 					"analyzer" : "standard" //there are many kinds of analyzers
+ 				},
+ 				"age" : {
+ 					"type" : "integer"
+ 				},
+ 				"total_spent" : {
+ 					"type" : "float"
+ 				},
+ 				"is_new" : {
+ 					"type" : "boolean"
+ 				},
+ 				"name" : {
+ 					"type" : "text",
+ 					"analyzer" : "standard" //there are many kinds of analyzers
+ 				}
+ 			}
+ 		}
+	}
+}
+
+When we have additional fields than we defined in structure, it'll add that additional field into the structure automatically.
+Inorder to restrict this, there is a key for that
+"dynamic" key : If set to "false", indexing field will be ignored, unmapped data will be ignored
+			  : If set to "strict", indexing field will throw error
+
+GET /customers/_mapping/online 
+{
+	"dynamic" : false
+}
+
+There are different type of analyzers. U can check in the documentation page.
+
+POST _analyze 
+{
+  "analyzer": "whitespace",
+  "text" : "the quick brown fox"
+}
+//divided based on white spaces
+{
+  "tokens" : [
+    {
+      "token" : "the",
+      "start_offset" : 0,
+      "end_offset" : 3,
+      "type" : "word",
+      "position" : 0
+    },
+    {
+      "token" : "quick",
+      "start_offset" : 4,
+      "end_offset" : 9,
+      "type" : "word",
+      "position" : 1
+    },
+    {
+      "token" : "brown",
+      "start_offset" : 10,
+      "end_offset" : 15,
+      "type" : "word",
+      "position" : 2
+    },
+    {
+      "token" : "fox",
+      "start_offset" : 16,
+      "end_offset" : 19,
+      "type" : "word",
+      "position" : 3
+    }
+  ]
+}
+------------------------------------------------------------------------
+Querying - DSL(Domain Specific Language)
+--------
+Everything is JSON over HTTP
+It shows the result based on relevancy score(_score).
+Relevancy score is calculated bases on many factors
+
+2 types of search syntax components 
+	Query Context: Full text searches
+	Filter Context: 
+
+Query Context : 
+GET /courses/_search
+{
+	"query" : {
+		"match_all" : {}
+	}
+}
+
+GET /courses/_search
+{
+	"query" : {
+		"match" : { "name":"computer"}
+	}
+}
+
+//Checks whether the field exists
+GET /courses/_search
+{
+	"query" : {
+		"exists" : { "field":"professor.email"}
+	}
+}
+
+//multiple match fields
+//both match should be true
+GET /courses/_search
+{
+	"query" : {
+		"bool" : {
+			"must" : [
+				{"match" : { "name":"computer"}},
+				{"match" : { "room":"c8"}}
+			]
+		}
+	}
+}
+
+//must_not
+GET /courses/_search
+{
+	"query" : {
+		"bool" : {
+			"must" : [
+				{"match" : { "name":"accounting"}},
+				{"match" : { "room":"e3"}}
+			],
+			"must_not" : [
+				{"match" : { "professor.name":"bill"}}
+			]
+		}
+	}
+}
+
+//should : nice to have but not necessary. WIll add more relevence score if matched
+GET /courses/_search
+{
+	"query" : {
+		"bool" : {
+			"must" : [
+				{"match" : { "name":"accounting"}},
+				{"match" : { "room":"e3"}}
+			],
+			"must_not" : [
+				{"match" : { "professor.name":"bill"}}
+			],
+			"should" : [
+				{"match" : { "name":"computer"}}
+			]
+		}
+	}
+}
+
+inorder to make should as necessary, we should add "minimum_should_match" key
+GET /courses/_search
+{
+	"query" : {
+		"bool" : {
+			"must" : [
+				{"match" : { "name":"accounting"}},
+				{"match" : { "room":"e3"}}
+			],
+			"must_not" : [
+				{"match" : { "professor.name":"bill"}}
+			],
+			"should" : [
+				{"match" : { "room":"e7"}}
+			],
+			"minimum_should_match" : 1
+		}
+	}
+}
+
+//multi_match : search on multiple fields
+//on fields name & professor.department, check whether accounting word is there or not
+GET /courses/_search
+{
+	"query" : {
+		"multi_match" : {
+			"fields" : ["name", "professor.department"],
+			"query" : "accounting"
+		}
+	}
+}
+
+//match_phrase : matches a part of sentence
+//takes each word as tokens and matches them. if one of them half a word/half a token, then it'll not match.
+//it'll return 0
+GET /courses/_search
+{
+	"query" : {
+		"match_phrase" : {
+			"course_description" : "from the business school taken"
+		}
+	}
+}
+
+//match_phrase_prefix : matches a part of sentence
+//matches half a word/partial token also
+GET /courses/_search
+{
+	"query" : {
+		"match_phrase" : {
+			"course_description" : "from the business school taken"
+		}
+	}
+}
+
+//range : search documents within given range
+//gte, gt, lte, lt
+GET /courses/_search
+{
+	"query" : {
+		"range" : {
+			"students_enrolled" : {
+				"gte" : 10,
+				"lte" : 20
+			}
+		}
+	}
+}
+
+
+GET /courses/_search
+{
+	"query" : {
+		"bool" : {
+			"must" : [
+				{"match" : {"name":"accounting"}}
+			],
+			"must_not" : [
+				{"match" : {"room" : "e7"}}
+			],
+			"should" : [
+				{"range" : {
+						"students_enrolled" : {
+							"gte":10,
+							"lte":20
+						}
+					}
+				}
+			]
+		}
+	}
+}
+
+Filter Context :
+Does not do relevancy score calculation
+Filters are cached which makes it faster
+
+//Format
+GET /courses/_search
+{
+	"query" : {
+		"bool" : {
+			"filter" : {
+				
+			}
+		}
+	}
+}
+
+GET /courses/_search
+{
+	"query" : {
+		"bool" : {
+			"filter" : {
+				"bool" : {
+					"must" : [
+						{"match" : {"professor.name" : "bill"}},
+						{"match" : {"name" : "accounting"}}
+					]
+				}
+			}
+			"should" : [
+				{"multi_match" : {
+						"fields" : ["name", "professor.department^2"], //if this is matched, relevancy score 													//boosts by 2 = field boosting	
+						"query" : "accounting"
+					}
+				}
+			]	
+		}
+	}
+}
+--------------------------------------------------------------------------------------------
+Another way to index the docs. (In BULK)
+
+POST /vehicles/cars/_bulk
+{ "index": {}}
+{ "price" : 10000, "color" : "white", "make" : "honda", "sold" : "2016-10-28", "condition": "okay"}
+{ "index": {}}
+{ "price" : 20000, "color" : "white", "make" : "honda", "sold" : "2016-11-05", "condition": "new" }
+{ "index": {}}
+{ "price" : 30000, "color" : "green", "make" : "ford", "sold" : "2016-05-18", "condition": "new" }
+{ "index": {}}
+{ "price" : 15000, "color" : "blue", "make" : "toyota", "sold" : "2016-07-02", "condition": "good" }
+{ "index": {}}
+{ "price" : 12000, "color" : "green", "make" : "toyota", "sold" : "2016-08-19" , "condition": "good"}
+{ "index": {}}
+{ "price" : 18000, "color" : "red", "make" : "dodge", "sold" : "2016-11-05", "condition": "good"  }
+{ "index": {}}
+{ "price" : 80000, "color" : "red", "make" : "bmw", "sold" : "2016-01-01", "condition": "new"  }
+{ "index": {}}
+{ "price" : 25000, "color" : "blue", "make" : "ford", "sold" : "2016-08-22", "condition": "new"  }
+{ "index": {}}
+{ "price" : 10000, "color" : "gray", "make" : "dodge", "sold" : "2016-02-12", "condition": "okay" }
+{ "index": {}}
+{ "price" : 19000, "color" : "red", "make" : "dodge", "sold" : "2016-02-12", "condition": "good" }
+{ "index": {}}
+{ "price" : 20000, "color" : "red", "make" : "chevrolet", "sold" : "2016-08-15", "condition": "good" }
+{ "index": {}}
+{ "price" : 13000, "color" : "gray", "make" : "chevrolet", "sold" : "2016-11-20", "condition": "okay" }
+{ "index": {}}
+{ "price" : 12500, "color" : "gray", "make" : "dodge", "sold" : "2016-03-09", "condition": "okay" }
+{ "index": {}}
+{ "price" : 35000, "color" : "red", "make" : "dodge", "sold" : "2016-04-10", "condition": "new" }
+{ "index": {}}
+{ "price" : 28000, "color" : "blue", "make" : "chevrolet", "sold" : "2016-08-15", "condition": "new" }
+{ "index": {}}
+{ "price" : 30000, "color" : "gray", "make" : "bmw", "sold" : "2016-11-20", "condition": "good" }
+----------------------------------------------------------------------------------------
+
+GET /vehicles/cars/_search
+{
+  "size":20,
+  "query" : {
+    "match_all": {}
+  }
+}
+
+If u don't use size key, only top 10 documents are shown.
+size is to just show the documents in UI
+
+GET /vehicles/cars/_search
+{
+  "from":0,
+  "size":5,
+
+  "query" : {
+    "match_all": {}
+  },
+  "sort" : [
+      {"price" : {"order" : "desc"}}
+    ]
+}
+
+we can sort on multiple fields
+-------------------------------------------------------------------------
+Aggregations
+------------
+
+	"aggs": {
+        "NAME": {
+          "AGG_TYPE": {}
+        }
+      }
+
+Getting insight of the data from high level
+
+GET /vehicles/cars/_count
+{
+  "query" : {
+    "match" : {
+      "make": "toyota"
+    }
+  }
+}
+
+{
+  "count" : 2,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  }
+}
+
+
+We need aggs key for aggregation query
+
+GET /vehicles/cars/_search
+{
+  "aggs" : {
+    "my_made_up_key" : {
+      "terms"  : {
+        "field": "make.keyword"
+      }
+    }
+  }
+}
+
+{
+  "took" : 5,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 16,
+      "relation" : "eq"
+    },
+    "max_score" : 1.0,
+    "hits" : [
+      {
+        "_index" : "vehicles",
+        "_type" : "cars",
+        "_id" : "hFmUH3MBJKncL4pO1kmS",
+        "_score" : 1.0,
+        "_source" : {
+          "price" : 10000,
+          "color" : "white",
+          "make" : "honda",
+          "sold" : "2016-10-28",
+          "condition" : "okay"
+        }
+      },
+      {
+        "_index" : "vehicles",
+        "_type" : "cars",
+        "_id" : "hVmUH3MBJKncL4pO1kmS",
+        "_score" : 1.0,
+        "_source" : {
+          "price" : 20000,
+          "color" : "white",
+          "make" : "honda",
+          "sold" : "2016-11-05",
+          "condition" : "new"
+        }
+      },
+      {
+        "_index" : "vehicles",
+        "_type" : "cars",
+        "_id" : "hlmUH3MBJKncL4pO1kmS",
+        "_score" : 1.0,
+        "_source" : {
+          "price" : 30000,
+          "color" : "green",
+          "make" : "ford",
+          "sold" : "2016-05-18",
+          "condition" : "new"
+        }
+      },
+      {
+        "_index" : "vehicles",
+        "_type" : "cars",
+        "_id" : "h1mUH3MBJKncL4pO1kmS",
+        "_score" : 1.0,
+        "_source" : {
+          "price" : 15000,
+          "color" : "blue",
+          "make" : "toyota",
+          "sold" : "2016-07-02",
+          "condition" : "good"
+        }
+      },
+      {
+        "_index" : "vehicles",
+        "_type" : "cars",
+        "_id" : "iFmUH3MBJKncL4pO1kmS",
+        "_score" : 1.0,
+        "_source" : {
+          "price" : 12000,
+          "color" : "green",
+          "make" : "toyota",
+          "sold" : "2016-08-19",
+          "condition" : "good"
+        }
+      },
+      {
+        "_index" : "vehicles",
+        "_type" : "cars",
+        "_id" : "iVmUH3MBJKncL4pO1kmS",
+        "_score" : 1.0,
+        "_source" : {
+          "price" : 18000,
+          "color" : "red",
+          "make" : "dodge",
+          "sold" : "2016-11-05",
+          "condition" : "good"
+        }
+      },
+      {
+        "_index" : "vehicles",
+        "_type" : "cars",
+        "_id" : "ilmUH3MBJKncL4pO1kmS",
+        "_score" : 1.0,
+        "_source" : {
+          "price" : 80000,
+          "color" : "red",
+          "make" : "bmw",
+          "sold" : "2016-01-01",
+          "condition" : "new"
+        }
+      },
+      {
+        "_index" : "vehicles",
+        "_type" : "cars",
+        "_id" : "i1mUH3MBJKncL4pO1kmS",
+        "_score" : 1.0,
+        "_source" : {
+          "price" : 25000,
+          "color" : "blue",
+          "make" : "ford",
+          "sold" : "2016-08-22",
+          "condition" : "new"
+        }
+      },
+      {
+        "_index" : "vehicles",
+        "_type" : "cars",
+        "_id" : "jFmUH3MBJKncL4pO1kmS",
+        "_score" : 1.0,
+        "_source" : {
+          "price" : 10000,
+          "color" : "gray",
+          "make" : "dodge",
+          "sold" : "2016-02-12",
+          "condition" : "okay"
+        }
+      },
+      {
+        "_index" : "vehicles",
+        "_type" : "cars",
+        "_id" : "jVmUH3MBJKncL4pO1kmS",
+        "_score" : 1.0,
+        "_source" : {
+          "price" : 19000,
+          "color" : "red",
+          "make" : "dodge",
+          "sold" : "2016-02-12",
+          "condition" : "good"
+        }
+      }
+    ]
+  },
+  "aggregations" : {
+    "my_made_up_key" : {
+      "doc_count_error_upper_bound" : 0,
+      "sum_other_doc_count" : 0,
+      "buckets" : [
+        {
+          "key" : "dodge",
+          "doc_count" : 5
+        },
+        {
+          "key" : "chevrolet",
+          "doc_count" : 3
+        },
+        {
+          "key" : "bmw",
+          "doc_count" : 2
+        },
+        {
+          "key" : "ford",
+          "doc_count" : 2
+        },
+        {
+          "key" : "honda",
+          "doc_count" : 2
+        },
+        {
+          "key" : "toyota",
+          "doc_count" : 2
+        }
+      ]
+    }
+  }
+}
+
+
+Aggregation is good for single valued values, not sentences
+
+GET /vehicles/cars/_search
+{
+  "aggs" : {
+    "my_made_up_key" : {
+      "terms"  : {
+        "field": "make.keyword"
+      },
+      "aggs" : {
+        "avg_price_ajay" : {
+          "avg": {
+            "field": "price"
+          }
+        },
+        "max_price_ajay" : {
+          "max" : {
+            "field": "price"
+          }
+        },
+        "min_price_ajay" : {
+          "min" : {
+            "field": "price"
+          }
+        }
+      }
+    }
+  }
+}
+
+"buckets" : [
+        {
+          "key" : "dodge",
+          "doc_count" : 5,
+          "avg_price_ajay" : {
+            "value" : 18900.0
+          },
+          "min_price_ajay" : {
+            "value" : 10000.0
+          },
+          "max_price_ajay" : {
+            "value" : 35000.0
+          }
+        },
+
+
+
+Here the aggregation can be bounded over the query
+
+GET /vehicles/cars/_search
+{
+  "query" : {
+    "match": {
+      "color": "red"
+    }
+  },
+  "aggs" : {
+    "my_made_up_key" : {
+      "terms"  : {
+        "field": "make.keyword"
+      },
+      "aggs" : {
+        "avg_price_ajay" : {
+          "avg": {
+            "field": "price"
+          }
+        },
+        "max_price_ajay" : {
+          "max" : {
+            "field": "price"
+          }
+        },
+        "min_price_ajay" : {
+          "min" : {
+            "field": "price"
+          }
+        }
+      }
+    }
+  }
+}
+
+//Here buckets are created on "my_made_up_key"
+
+GET /vehicles/cars/_search
+{
+  "size" : 0,
+  "query" : {
+    "match": {
+      "color": "red"
+    }
+  },
+  "aggs" : {
+    "my_made_up_key" : {
+      "terms"  : {
+        "field": "make.keyword"
+      },
+      "aggs" : {
+        "stats_on_price_ajay" : {
+          "stats": {
+            "field": "price"
+          }
+        }
+      }
+    }
+  }
+}
+
+"buckets" : [
+        {
+          "key" : "dodge",
+          "doc_count" : 3,
+          "stats_on_price_ajay" : {
+            "count" : 3,
+            "min" : 18000.0,
+            "max" : 35000.0,
+            "avg" : 24000.0,
+            "sum" : 72000.0
+          }
+        },
+
+
+GET /vehicles/cars/_search
+{
+  "size" : 0,
+  "query" : {
+    "match": {
+      "color": "red"
+    }
+  },
+  "aggs" : {
+    "my_made_up_key" : {
+      "terms"  : {
+        "field": "make.keyword"
+      },
+      "aggs" : {
+        "sold_date_ranges" : {
+          "range": {
+            "field": "sold",
+            "ranges" : [
+              {
+                "from": "2016-01-01",
+                "to": "2016-05-18"
+              },
+              {
+                "from" : "2016-05-18",
+                "to":"2017-01-01"
+              }]
+          }
+        }
+      }
+    }
+  }
+}
+
+"buckets" : [
+        {
+          "key" : "dodge",
+          "doc_count" : 3,
+          "sold_date_ranges" : {
+            "buckets" : [
+              {
+                "key" : "2016-01-01T00:00:00.000Z-2016-05-18T00:00:00.000Z",
+                "from" : 1.4516064E12,
+                "from_as_string" : "2016-01-01T00:00:00.000Z",
+                "to" : 1.4635296E12,
+                "to_as_string" : "2016-05-18T00:00:00.000Z",
+                "doc_count" : 2
+              },
+              {
+                "key" : "2016-05-18T00:00:00.000Z-2017-01-01T00:00:00.000Z",
+                "from" : 1.4635296E12,
+                "from_as_string" : "2016-05-18T00:00:00.000Z",
+                "to" : 1.4832288E12,
+                "to_as_string" : "2017-01-01T00:00:00.000Z",
+                "doc_count" : 1
+              }
+            ]
+          }
+        },
+
+
+We can create multiple buckets.
+GET /vehicles/cars/_search
+{
+  "size" : 0,
+  "query" : {
+    "match": {
+      "color": "red"
+    }
+  },
+  "aggs" : {
+    "my_made_up_key" : {  //my_made_up_key is one bucket
+      "terms"  : {
+        "field": "make.keyword"
+      },
+      "aggs" : {
+        "sold_date_ranges" : { //sold_date_ranges is nested bucket
+          "range": {
+            "field": "sold",
+            "ranges" : [
+              {
+                "from": "2016-01-01",
+                "to": "2016-05-18"
+              },
+              {
+                "from" : "2016-05-18",
+                "to":"2017-01-01"
+              }]
+          },
+          "aggs" : {
+            "avg_price_ajay" : { //this is inbuilt avg function
+              "avg": {
+                "field": "price"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+GET /vehicles/cars/_search
+{
+  "size" : 0,
+  
+  "aggs" : {
+    "car_conditions" : { //bucket 1
+      "terms": {
+        "field": "condition.keyword"
+      },
+      "aggs": {
+        "avg_price": {
+          "avg": {
+            "field": "price"
+          }
+        },
+        "make_ajay" : { //bucket 2
+          "terms": {
+            "field": "make.keyword"
+          },
+          "aggs": {
+            "min_price": {
+              "min": {
+                "field": "price"
+              }
+            },
+            "max_price" : {
+              "max": {
+                "field": "price"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+--------------------------------------------------------------------------------------------------
+Logstash (PORT : 9600)
+--------
+Data processing pipeline engine.
+U can get data/logs from any source, u can ingest into ES/sql.
+
+3 stages: (Inputs, Filters, Output)
+	DataSources => [ INPUTS -> FILTERS -> OUTPUT ] => DataDestinations
+
+To Run Logstash:
+	Prepare a logstash.conf config file
+	Run bin/logstash -f logstash.conf
+
+J Ruby
+	input {}
+	filters {}
+	output {}
+
+To test whether logstash will run
+	 bin/logstash -e 'input {stdin {}} output {stdout {}}'
+	 	error: Unrecognized JVM option => Java version is incompatible with logstash version
+
+input can be anything.
+=>To understand more about the plugins, check the documentation of logstash
+
+input 
+{
+	file { //here we are inputting using file. (file plugin)
+		path => "D:\ELK_Course\data\logs\logs"
+		type => "logs"
+		start_position => "beginning"
+	}
+	
+}
+
+filter
+{
+	grok{ //plugin for regular expr matching
+		match => {
+			"message" => "%{COMBINEDAPACHELOG}"
+		}
+	}
+	mutate{
+		convert => { "bytes" => "integer" }
+	}
+	date {
+		match => [ "timestamp", "dd/MMM/YYYY:HH:mm:ss Z" ]
+		locale => en
+		remove_field => "timestamp"
+	}
+	geoip {
+		source => "clientip"
+	}
+	useragent {
+		source => "agent"
+		target => "useragent"
+	}
+}
+
+output
+{
+	stdout {
+		codec => dots
+	}
+
+ 	elasticsearch {
+
+  	}
+}
+
+
+run =>  bin/logstash -f ../data/apache.conf
+
+to check the documents : http://localhost:9200/logstash*/_count
+
+check index management in GUI
+check visualization and set the index pattern 
+then check the different graphs
+
+Architecting ELk
+----------------
+Kibana UI => ES <= Logstash
+
+Suppose u have 3 servers (Mobile, web app, desktop)
+
+We dont have to install logstash on these 3 servers as it is heavy process.
+Maintain a separate node for logstash.
+From those 3 servers, using some light weight process, send logs to logstash.
+logstash will index in ES
+
+Light weight process => scp, rsync, beats(most preferred)
+
+Beats (file) = light weight data shippers. deployed on edge servers(mobile, webapp, desktop)
+Metric beats, packet beat, heart beat, vimlog beat, audit beat, mongo beat.....etc
+
+File Beat
+---------
+Download the Filebeat Windows zip file from the Download page.
+
+Extract the contents of the zip file into C:\Program Files.
+
+Rename the filebeat-7.8.0-windows directory to Filebeat.
+
+Open a PowerShell prompt as an Administrator (right-click the PowerShell icon and select Run As Administrator). If you are running Windows XP, you might need to download and install PowerShell.
+
+From the PowerShell prompt, run the following commands to install Filebeat as a Windows service.
+
+cd "C:\Program Files\Filebeat"
+.\install-service-filebeat.ps1
+
+Modify the settings under output.elasticsearch in the C:\Program Files\Filebeat\filebeat.yml file to point to your Elasticsearch installation.
+
+Edit the filebeat.yml configuration file
+	enable the enabled key (enabled:true) in filebeat.inputs
+	change/set the paths in filebeat.inputs
+	change/set output.elasticsearch hosts (if output is elastic search)
+	change/set output.logstash hosts (if output is logstash)
+
+Start the daemon by running sudo ./filebeat -e -c filebeat.yml
+
+Check the documents for more understanding
+
+3 components:
+	Prospector (identifies list of file to read log from)
+	Harvestor (reading the contents of the file. 1 harvestor for each file)
+	Spooler (lines are aggregated and sent to destinations)
+
