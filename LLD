@@ -1,0 +1,258 @@
+import java.util.*;
+import java.io.*;
+
+class ParentBird {
+	public int height;
+	public int weight;
+	
+	public ParentBird() {
+		System.out.println("Parent Bird");
+	}
+	
+	public void flyBird() {
+		System.out.println("Bird Flies");
+	}
+}
+
+public class Bird {
+	public static void main(String[] args) {
+
+		System.out.println("MAIN : Hello Bird");
+	
+		ParentBird hen = new ParentBird();
+		hen.flyBird();
+		
+		ParentBird eagle = new ParentBird();
+		eagle.flyBird();
+	}
+}
+
+Does the hen and eagle are same ?
+Should the flyBird() method be same for hen and eagle ?
+	=> No. Hen can't fly. Eagle can fly.
+
+So we can use the if-else conditions.
+	hen.flyBird("hen");
+	eagle.flyBird("eagle");
+
+	void flyBird(String birdType) {
+		if(birdType.equals("hen")) {
+			System.out.println("Hen Flies");
+		}
+		else {
+			System.out.println("Eagle Flies");
+		}
+	}
+
+The problems with above code 
+	1. If we have more birds, then more if-else conditions (Dirty Code)
+	2. Suppose if we want to have another function {void eatBird()}, then we have to write if-else condition for 	each bird. 
+	3. Suppose if we want to write more functions, in each function, we have to if-else condition for each bird
+	4. More Code, Less readable.
+	5. If we want to test, we have to send all the birds as all if-else conditions are different behaviours.
+	   In One class, we have multiple types of behaviour. Ideally each class should have only one behaviour.
+	6. We can do hen.flyBird("eagle") => goes to eagle behaviour.
+	   Since we are matching Strings, so there might be case like hen.flyBird("hens"), which will not match to anything
+
+So create a new class for each Bird. And inherit common behaviours from Parent Bird. (INHERITANCE).
+
+class Hen extends ParentBird {
+	public void flyBird() {
+		//Flap Wings
+		//Take Off
+		//Fly
+	}
+}
+
+class Eagle extends Bird{
+	public void flyBird() {
+		//Flap Wings
+		//Take Off
+		//Fly
+	}
+}
+
+As U can see FlapWings and TakeOff is same for all birds. SO tranfer it to the parent class.
+
+class Hen extends ParentBird {
+	public void flyBird() {
+		super.flyBird();
+		//Fly
+	}
+}
+
+class Eagle extends Bird{
+	public void flyBird() {
+		super.flyBird();
+		//Fly
+	}
+}
+
+There might be some birds, which cannot fly.
+	=> Here we are assuming all birds can fly so fly method is in base/parent class. It shd be removed if birds 	can't fly.
+
+Suppose, If I want add a new Bird Duck.
+class Duck extends ParentBird {
+	
+}
+
+And forgot to implement the flyBird() method.
+But still I can create the object of Duck without any errors.
+If I do 
+	new Duck().flyBird();
+Still no errors are thrown, because flyBird() is present in Base class.
+
+Now Duck can do only flapWings and TakeOff. after that it doesn't know what to do.
+For Eagle, I did flapWings and TakeOff. Then It did specify thing that defines eagle.
+
+NO error is thrown. These type Errors are called SILENT KILLERS.
+
+So we use INTERFACES to avoid silent killers. Because we have to override mandatorily all functions that are defined in interface.
+
+Now we have to write complete codes for all the methods.
+
+Which to choose Interface or Inheritance ?
+	Inheritance describes an is-a relationship.
+
+	Implementing an interface describes a can-do relationship.
+
+	interface , Whenever some type needs to declare that, at least, has some behaviors and properties that a consumer should care about and use them to accomplish some task.
+
+	Inheritance, Whenever a group of entities share same archetype, meaning B inherits A because B is A with differences, but B can be identified as A.
+
+
+RUN TIME POLYMORPHISM
+	ParentBird e = new Eagle();
+	ParentBird h = new Hen();
+		
+	e.flyBird();
+	h.flyBird();
+
+If polymorphism is not there, then we had to write different sell() methods for each bird.
+
+class Seller {
+	void sell(ParentBird birdType) {
+
+	}
+}
+
+Here seller can change anything in the bird class
+class Seller {
+	void sell(ParentBird birdType) {
+		birdType.height = 500;
+	}
+}
+
+So we can make height variable as private. So that cannot be accessed in Seller class.
+But there might be chance that more height Hen has higher price. At that time, we need to access the height.
+So we give a read-only access of height variable to Seller class using getters.
+
+	public int getHeight() {
+		return this.height;
+	}
+
+If we dont want to have a random value, then we give setters (write access)
+	public void setHeight(int height) {
+		this.height = height;
+	}
+
+	we can't set some random values also. We can write some validations in the setter method.
+	public void setHeight(int height) {
+		if(height > 10 && height < 200)
+			this.height = height;
+		else
+			System.out.println("Height shd be in range 10 to 200");
+	}
+
+ENCAPSULATION => Getters & Setters
+
+ABSTRACTION => hiding the details and exposing the API
+	Like sort() method.
+		Internally based on input it might use mergeSort() / quickSort() / insertionSort().
+
+
+Design SNAPDEAL
+---------------
+Ask Use cases/ requirements first	
+	1. customer Buying products
+	2. seller selling products
+	3. search a product
+	4. login
+	5. cart
+	6. payment
+	7. checkout
+
+These are defining the system what to do => functional requirements
+
+Non functional requirements => performance, scalable, security
+
+THen start a use case diagram
+--------------------------------------------------------------------------------------------------------------
+import java.util.*;
+import java.io.*;
+
+abstract class ParentBird {
+	private int height;
+	private int weight;
+	
+	public int getHeight() {
+		return height;
+	}
+
+	public void setHeight(int height) {
+		if(height > 10 && height < 200)
+			this.height = height;
+		else
+			System.out.println("Height shd be between 10 & 200");
+	}
+
+	public int getWeight() {
+		return weight;
+	}
+
+	public void setWeight(int weight) {
+		if(weight > 5 && weight < 300)
+			this.weight = weight;
+		else
+			System.out.println("Weight shd ve between 5 & 300");
+	}
+
+	public abstract void flyBird();
+}
+
+class Hen extends ParentBird {
+	public void flyBird() {
+		System.out.println("Hen Flies Low");
+	}
+}
+
+class Eagle extends ParentBird{
+	public void flyBird() {
+		System.out.println("Eagle flies high");
+	}
+}
+
+class Duck extends ParentBird{
+	public void flyBird() {
+		System.out.println("Duck flies Medium");
+	}
+}
+
+class Seller {
+	public void sell(ParentBird birdType) {
+		birdType.setWeight(100);
+		birdType.setHeight(500);
+		System.out.println(birdType.getWeight());
+		System.out.println(birdType.getHeight());
+		birdType.flyBird();
+		System.out.println();
+	}
+}
+public class Bird {
+	public static void main(String[] args) {
+		ParentBird e = new Eagle();
+		ParentBird h = new Hen();
+		new Seller().sell(e);
+		new Seller().sell(h);
+	}
+}
