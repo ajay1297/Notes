@@ -1,0 +1,93 @@
+1 thread == 1 call stack == 1 thing at a time
+
+console.log("Hi")
+setTimeout(() => {
+	console.log("Hello");
+}, 5000);
+console.log("There");
+
+o/p => 
+	Hi
+	There
+	Hello
+
+
+call stack
+	main()
+	console.log("Hi")
+	---------------------------
+	main()
+	setTimeout(cb, 5000)
+	---------------------------
+	main()
+	console.log("There")
+	---------------------------
+	console.log("Hello")
+	---------------------------
+	empty
+	---------------------------
+
+javascript run time can do only 1 thing at a time.
+But we can do more than that bcoz of browser.
+Browser provides us webapis. Webapis are the threads. We can make calls using them.
+In nodeJs, Instead of webapis, we have c++ apis.
+
+setTimeout() is provided by browser, but not v8.
+When u call, the browser calls a timer() for the delay u have given.
+
+Webapis are c++ threads. After the workdone in Webapis, it is placed in task queue/callback queue.
+
+Event Loop
+	check the call stack & task queue.
+	if the call stack is empty, push the front task from task queue to call stack
+
+
+console.log("Hi")
+setTimeout(() => {
+	console.log("Hello");
+}, 0);
+console.log("There");
+
+Even though if we give setTimeout() delay as 0. Still the result will be same. Because only if call stack is
+empty, then only the event loop pushes from task queue to call stack.
+
+The code for running setTimeout(), Ajax Request, DOM, xml/http requests, browser Object model (BOM) ... etc 
+does not exist in javascript runtime environment. It is there in webapis provided by browser.
+
+setTimeout() doesnot call the function immediately after the delay.
+It depends on other things like the task queue and call stack.
+
+Browser wants repaint the screen for every 16.6 milli seconds.
+rendering has to wait until call stack is clear. else we cant render
+render queue has higher priority than callback queue
+
+If the network calls are synchronous, then whole DOM will be freezed until that network call gets
+completed. So we make them asynchronous using setTimeout.
+
+nodeJs
+------
+node --inspect-brk index.js
+chrome://inspect
+
+Progressive rendering
+---------------------
+Client side rendering: Where we download the JS bundle and then render it.
+Server side rendering: 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

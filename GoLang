@@ -1,0 +1,203 @@
+Every Go program is made up of packages.
+
+Programs start running in package main.
+
+By convention, the package name is the same as the last element of the import path. For instance, the "math/rand" package comprises files that begin with the statement package rand.
+
+import "math"
+import "fmt"
+
+import (
+	"fmt"
+	"math"
+)
+
+In Go, a name is exported if it begins with a capital letter.
+When importing a package, you can refer only to its exported names. Any "unexported" names are not accessible from outside the package.
+
+Notice that the type comes after the variable name.
+
+When two or more consecutive named function parameters share a type, you can omit the type from all but the last.
+func add(x int, y int) int {
+	return x + y
+}
+
+func add(x , y int) int {
+	return x + y
+}
+
+A function can return any number of results/multiple things.
+func swap(x, y string) (string, string) {
+	return y, x
+}
+
+Go's return values may be named. If so, they are treated as variables defined at the top of the function.
+func split(sum int) (x, y int) {
+	x = sum * 4 / 9
+	y = sum - x
+	return
+}
+A return statement without arguments returns the named return values. This is known as a "naked" return.
+
+Naked return statements should be used only in short functions, as with the example shown here. They can harm readability in longer functions.
+
+The var statement declares a list of variables; as in function argument lists, the type is last.
+var i int
+var var1, var2, var3 bool  => by default, its false
+
+A var statement can be at package or function level
+
+A var declaration can include initializers, one per variable.
+If an initializer is present, the type can be omitted; the variable will take the type of the initializer.
+var c, python, java = true, false, "no!"
+
+Inside a function, the := short assignment statement can be used in place of a var declaration with implicit type.
+c, python, java := true, false, "no!"
+
+Data Types
+	1.bool
+	2.string
+	3.int  int8  int16  int32  int64
+	  uint uint8 uint16 uint32 uint64 uintptr
+	4.byte // alias for uint8
+
+	5.rune // alias for int32
+     // represents a Unicode code point
+
+	6.float32 float64
+	7.complex64 complex128
+
+var ToBe, MaxInt, z = false, 1<<64-1, cmplx.Sqrt(-5+12i)
+var (
+	ToBe   bool       = false
+	MaxInt uint64     = 1<<64 - 1
+	z      complex128 = cmplx.Sqrt(-5 + 12i)
+)
+
+Variables declared without an explicit initial value are given their zero value.
+	0 for numeric types,
+	false for the boolean type, and
+	"" (the empty string) for strings.
+
+Type Conversions = The expression T(v) converts the value v to the type T.
+var i int = 42
+var f float64 = float64(i) 
+	=> i is converted from int to float64
+
+Type Inference = When declaring a variable without specifying an explicit type (either by using the := syntax or var = expression syntax), the variable's type is inferred from the value on the right hand side.
+var i int
+j := i  => Here j is an int
+
+But when the right hand side contains an untyped numeric constant, the new variable may be an int, float64, or complex128 depending on the precision of the constant:
+x := 3.142 => Here x is float64
+
+Constants are declared like variables, but with the const keyword.
+Constants can be character, string, boolean, or numeric values.
+Constants cannot be declared using the := syntax.
+
+Numeric constants are high-precision values.
+An untyped constant takes the type needed by its context.
+
+Go has only one looping construct, the for loop.
+The init statement will often be a short variable declaration, and the variables declared there are visible only in the scope of the for statement.
+the braces { } are always required.
+
+for i:=0;i<10;i++{
+		sum += i
+	}
+
+The init and post statements are optional.
+for ; sum < 1000; {
+		sum += sum
+	}
+
+For is Go's "while"
+for sum < 1000 {
+		sum += sum
+	}
+
+If you omit the loop condition it loops forever, so an infinite loop is compactly expressed.
+for {
+	
+}
+
+Go's if statements are like its for loops; the expression need not be surrounded by parentheses ( ) but the braces { } are required.
+
+if x<0{
+	fmt.Println("Hello world")
+}
+
+Like for, the if statement can start with a short statement to execute before the condition.
+Variables declared by the statement are only in scope until the end of the if.
+
+Variables declared inside an if short statement are also available inside any of the else blocks.
+
+A switch statement is a shorter way to write a sequence of if - else statements. It runs the first case whose value is equal to the condition expression.
+Go only runs the selected case, not all the cases that follow
+Go's switch cases need not be constants, and the values involved need not be integers.
+Switch cases evaluate cases from top to bottom, stopping when a case succeeds.
+Switch without a condition is the same as switch true.
+This construct can be a clean way to write long if-then-else chains.
+switch {
+	case t.Hour() < 12:
+		fmt.Println("Good morning!")
+	case t.Hour() < 17:
+		fmt.Println("Good afternoon.")
+	default:
+		fmt.Println("Good evening.")
+	}
+
+A defer statement defers the execution of a function until the surrounding function returns.
+The deferred call's arguments are evaluated immediately, but the function call is not executed until the surrounding function returns.
+
+Deferred function calls are pushed onto a stack. When a function returns, its deferred calls are executed in last-in-first-out order.
+
+Go has pointers. A pointer holds the memory address of a value.
+The type *T is a pointer to a T value. Its zero value is nil.
+The & operator generates a pointer to its operand.
+	i := 42
+	p = &i
+The * operator denotes the pointer's underlying value.
+	fmt.Println(*p)
+This is known as "dereferencing" or "indirecting"
+
+A struct is a collection of fields.
+type Vertex struct {
+	X int
+	Y int
+}
+fmt.Println(Vertex{1, 2})
+
+Struct fields are accessed using a dot.
+v := Vertex{1,2}
+v.X = 10
+v.Y = 20
+
+Struct fields can be accessed through a struct pointer.
+To access the field X of a struct when we have the struct pointer p we could write (*p).X. However, that notation is cumbersome, so the language permits us instead to write just p.X, without the explicit dereference.
+	v := Vertex{1, 2}
+	p := &v
+	p.X = 1e9
+	fmt.Println(v)
+
+A struct literal denotes a newly allocated struct value by listing the values of its fields.
+var (
+	v1 = Vertex{1, 2}  // has type Vertex
+	v2 = Vertex{X: 1}  // Y:0 is implicit
+	v3 = Vertex{}      // X:0 and Y:0
+	p  = &Vertex{1, 2} // has type *Vertex
+)
+
+{1 2} {1 0} {0 0} &{1 2}
+
+The type [n]T is an array of n values of type T.
+An array's length is part of its type, so arrays cannot be resized. This seems limiting, but don't worry; Go provides a convenient way of working with arrays
+var a [10]int
+
+An array has a fixed size. A slice, on the other hand, is a dynamically-sized, flexible view into the elements of an array. In practice, slices are much more common than arrays.
+A slice is formed by specifying two indices, a low and high bound, separated by a colon:
+	a[low : high] => This selects a half-open range which includes the first element, but excludes the last one.
+
+A slice does not store any data, it just describes a section of an underlying array.
+Changing the elements of a slice modifies the corresponding elements of its underlying array.
+Other slices that share the same underlying array will see those changes.
